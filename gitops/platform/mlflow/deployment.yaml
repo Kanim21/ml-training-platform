@@ -54,6 +54,10 @@ spec:
                 mlflow, mlflow:*, mlflow.mlflow, mlflow.mlflow:*,
                 mlflow.mlflow.svc, mlflow.mlflow.svc:*, mlflow.mlflow.svc.cluster.local:*,
                 localhost:*, 127.0.0.1:*, 10.42.*
+            # The job runner (GenAI scorers/evaluations) is an extra ~190Mi
+            # Python process this platform has no use for.
+            - name: MLFLOW_SERVER_ENABLE_JOB_EXECUTION
+              value: "false"
             - name: HOME
               value: /tmp
           envFrom:
