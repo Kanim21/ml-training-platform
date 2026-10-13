@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  labels:
+    app.kubernetes.io/name: mlflow
+    app.kubernetes.io/part-of: ml-training-platform
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # avoid two servers in memory at once on a small node
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mlflow
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mlflow
+        app.kubernetes.io/part-of: ml-training-platform
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mlflow
+          # -full includes the Postgres driver and boto3.
+          image: ghcr.io/mlflow/mlflow:v3.17.1-full@sha256:190306b1739b9646d6d39333594334b69ba14ab843db927712c790b50892f262
+          command: [mlflow, server]
+          args:
+            - --host=0.0.0.0
+            - --port=5000
+            - --workers=1
+            - --serve-artifacts
+            - --artifacts-destination=s3://mlflow/artifacts
+          env:
+            - name: MLFLOW_BACKEND_STORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-db-app
+                  key: uri
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: http://seaweedfs.storage.svc:8333
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            # Host-header allowlist (DNS-rebinding guard). Replaces MLflow's
+            # defaults, so localhost (port-forward) and pod IPs (probes) are
+            # listed alongside the in-cluster service names.
+            - name: MLFLOW_SERVER_ALLOWED_HOSTS
+              value: >-
+                mlflow, mlflow:*, mlflow.mlflow, mlflow.mlflow:*,
+                mlflow.mlflow.svc, mlflow.mlflow.svc:*, mlflow.mlflow.svc.cluster.local:*,
+                localhost:*, 127.0.0.1:*, 10.42.*
+            - name: HOME
+              value: /tmp
+          envFrom:
+            - secretRef:
+                name: s3-credentials
+          ports:
+            - name: http
+              containerPort: 5000
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 100m, memory: 384Mi}
+            limits: {cpu: "1", memory: 768Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi

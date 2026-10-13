@@ -7,3 +7,20 @@ namespace: argocd
 resources:
   - namespace.yaml
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.5/manifests/install.yaml
+# Dex (SSO) and notifications are unused in this lab (admin login, no
+# alerting from ArgoCD); scaling them to zero frees memory on the small node.
+patches:
+  - target:
+      kind: Deployment
+      name: argocd-dex-server
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 0
+  - target:
+      kind: Deployment
+      name: argocd-notifications-controller
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 0

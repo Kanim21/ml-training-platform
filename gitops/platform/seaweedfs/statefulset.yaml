@@ -1,0 +1,76 @@
+# Single-process `weed mini` (master + volume + filer + S3) on one PVC. The
+# S3 identity comes from the sealed s3-credentials Secret via AWS_* env vars,
+# and the buckets are created on startup if missing.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: seaweedfs
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/part-of: ml-training-platform
+spec:
+  serviceName: seaweedfs
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seaweedfs
+        app.kubernetes.io/part-of: ml-training-platform
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000   # the image's `seaweed` user; skips the entrypoint's root chown path
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seaweedfs
+          image: docker.io/chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+          args:
+            - mini
+            - -dir=/data
+            - -ip=127.0.0.1   # all components share one process; only S3 is exposed
+            - -ip.bind=0.0.0.0
+            - -bucket=mlflow,checkpoints,datasets
+            - -webdav=false
+            - -admin.ui=false
+            - -s3.port.iceberg=0
+          envFrom:
+            - secretRef:
+                name: s3-credentials
+          ports:
+            - name: s3
+              containerPort: 8333
+          readinessProbe:
+            tcpSocket:
+              port: s3
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: s3
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi

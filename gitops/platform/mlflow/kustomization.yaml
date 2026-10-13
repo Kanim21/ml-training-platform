@@ -1,0 +1,11 @@
+# MLflow tracking server: Postgres (CloudNativePG) for run metadata and the
+# registry, SeaweedFS S3 for artifacts, proxied through the server.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: mlflow
+resources:
+  - namespace.yaml
+  - s3-credentials.sealed.yaml
+  - postgres.yaml
+  - deployment.yaml
+  - service.yaml

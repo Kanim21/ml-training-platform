@@ -1,0 +1,10 @@
+# SeaweedFS object store (S3 API) for datasets, checkpoints and MLflow
+# artifacts. Replaces MinIO; see docs/adr/0005-seaweedfs-instead-of-minio.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: storage
+resources:
+  - namespace.yaml
+  - s3-credentials.sealed.yaml
+  - statefulset.yaml
+  - service.yaml

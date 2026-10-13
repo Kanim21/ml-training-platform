@@ -1,0 +1,27 @@
+# Backend store for MLflow. CloudNativePG generates the `mlflow-db-app`
+# Secret (username, password, uri), so no database credential lives in Git.
+# One instance for now; the failover drill (5) needs instances >= 2.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: mlflow-db
+  labels:
+    app.kubernetes.io/name: mlflow-db
+    app.kubernetes.io/part-of: ml-training-platform
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-minimal-trixie
+  bootstrap:
+    initdb:
+      database: mlflow
+      owner: mlflow
+  postgresql:
+    parameters:
+      shared_buffers: 64MB
+      max_connections: "50"
+  storage:
+    storageClass: local-path
+    size: 2Gi
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}

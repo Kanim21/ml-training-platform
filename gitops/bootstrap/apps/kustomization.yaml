@@ -5,3 +5,5 @@ resources:
   - argocd.yaml
   - sealed-secrets.yaml
   - cnpg-operator.yaml
+  - seaweedfs.yaml
+  - mlflow.yaml
