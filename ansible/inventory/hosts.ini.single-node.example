@@ -1,0 +1,18 @@
+# Single-node lab: one Rocky Linux VM in VirtualBox with NAT networking.
+# SSH and the Kubernetes API reach the VM through NAT port-forwards on the
+# Mac (2222 -> 22, 6443 -> 6443), so kubectl talks to 127.0.0.1.
+# Add hosts under [k3s_agents] later to grow to the 3-node layout.
+[k3s_server]
+# Port-forward overrides are host vars: inventory group vars would lose to
+# the playbook's group_vars/all.yml.
+k3s-server-1 ansible_host=127.0.0.1 ansible_port=2222 kubeconfig_api_url=https://127.0.0.1:6443 k3s_extra_tls_sans='["127.0.0.1"]'
+
+[k3s_agents]
+
+[k3s_cluster:children]
+k3s_server
+k3s_agents
+
+[k3s_cluster:vars]
+ansible_user=KINGSLEY
+ansible_become=true

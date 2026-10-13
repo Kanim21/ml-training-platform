@@ -1,0 +1,19 @@
+---
+# Uninstalls K3s from every node so `make bootstrap` can be re-run from a
+# clean state. Leaves the OS hardening in place. Destroying the VMs
+# themselves (drill 6) is done in the hypervisor.
+- name: Uninstall K3s agents (including stale agents on server nodes)
+  hosts: k3s_cluster
+  tasks:
+    - name: Run k3s-agent-uninstall.sh
+      ansible.builtin.command: /usr/local/bin/k3s-agent-uninstall.sh
+      args:
+        removes: /usr/local/bin/k3s-agent-uninstall.sh
+
+- name: Uninstall K3s server
+  hosts: k3s_server
+  tasks:
+    - name: Run k3s-uninstall.sh
+      ansible.builtin.command: /usr/local/bin/k3s-uninstall.sh
+      args:
+        removes: /usr/local/bin/k3s-uninstall.sh

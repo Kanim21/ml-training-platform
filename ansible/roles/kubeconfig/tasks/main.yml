@@ -1,0 +1,18 @@
+---
+- name: Read admin kubeconfig
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: kubeconfig_admin_raw
+  no_log: true
+
+- name: Write kubeconfig on the control machine with the real API address
+  ansible.builtin.copy:
+    content: >-
+      {{ kubeconfig_admin_raw.content | b64decode
+         | replace('https://127.0.0.1:' ~ k3s_api_port, kubeconfig_api_url)
+         | replace(': default', ': ml-training-platform') }}
+    dest: "{{ kubeconfig_local_path }}"
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  no_log: true

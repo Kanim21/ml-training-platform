@@ -1,0 +1,21 @@
+# Managed by Ansible (roles/k3s_server). Do not edit on the node.
+write-kubeconfig-mode: "0600"
+selinux: true
+secrets-encryption: true
+tls-san:
+  - "{{ k3s_api_host }}"
+{% for san in k3s_extra_tls_sans %}
+  - "{{ san }}"
+{% endfor %}
+cluster-cidr: "{{ k3s_cluster_cidr }}"
+service-cidr: "{{ k3s_service_cidr }}"
+node-ip: "{{ k3s_node_ip }}"
+{% if k3s_disable_components %}
+disable:
+{% for c in k3s_disable_components %}
+  - {{ c }}
+{% endfor %}
+{% endif %}
+{% for k, v in k3s_server_extra_config.items() %}
+{{ k }}: {{ v | to_json }}
+{% endfor %}

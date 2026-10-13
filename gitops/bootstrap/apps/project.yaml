@@ -1,0 +1,19 @@
+# Every platform and serving app lives in this project, which may only pull
+# from this repo (plus pinned upstream Helm repos added per component).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ml-platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: ML training platform components
+  sourceRepos:
+    - https://github.com/Kanim21/ml-training-platform.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"

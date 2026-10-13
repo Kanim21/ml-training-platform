@@ -1,0 +1,79 @@
+---
+- name: Check for a leftover K3s agent install on this server node
+  ansible.builtin.stat:
+    path: /etc/systemd/system/k3s-agent.service
+  register: k3s_server_stale_agent
+
+- name: Refuse to install the server over a K3s agent
+  ansible.builtin.assert:
+    that:
+      - not k3s_server_stale_agent.stat.exists
+    fail_msg: >-
+      {{ inventory_hostname }} already has a k3s-agent service. Remove it first
+      (/usr/local/bin/k3s-agent-uninstall.sh) or run `make reset`.
+
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Write K3s server config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+  notify: Restart k3s
+
+- name: Download pinned K3s install script
+  ansible.builtin.get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: /usr/local/sbin/k3s-install.sh
+    checksum: "sha256:{{ k3s_install_script_sha256 }}"
+    mode: "0750"
+
+- name: Read installed K3s version
+  ansible.builtin.command: /usr/local/bin/k3s --version
+  register: k3s_server_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install K3s server
+  ansible.builtin.command: /usr/local/sbin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: server
+  when: k3s_version not in (k3s_server_installed.stdout | default(''))
+  changed_when: true
+
+- name: Ensure k3s service is running
+  ansible.builtin.service:
+    name: k3s
+    state: started
+    enabled: true
+
+- name: Apply config changes before reading the join token
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the server node to be Ready
+  ansible.builtin.command: >-
+    /usr/local/bin/k3s kubectl wait node/{{ inventory_hostname }}
+    --for=condition=Ready --timeout=30s
+  register: k3s_server_ready
+  until: k3s_server_ready.rc == 0
+  retries: 10
+  delay: 10
+  changed_when: false
+
+# K3s generates the token on first start; it is read from the node and
+# passed to agents in memory, never written to the repo.
+- name: Read node join token
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_server_node_token_raw
+  no_log: true
+
+- name: Expose join token to agent plays
+  ansible.builtin.set_fact:
+    k3s_server_node_token: "{{ k3s_server_node_token_raw.content | b64decode | trim }}"
+  no_log: true

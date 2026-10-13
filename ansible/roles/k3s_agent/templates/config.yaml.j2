@@ -1,0 +1,11 @@
+# Managed by Ansible (roles/k3s_agent). Do not edit on the node.
+server: "https://{{ k3s_api_host }}:{{ k3s_api_port }}"
+token: "{{ hostvars[groups['k3s_server'][0]]['k3s_server_node_token'] }}"
+selinux: true
+node-ip: "{{ k3s_node_ip }}"
+{% if k3s_agent_node_labels %}
+node-label:
+{% for l in k3s_agent_node_labels %}
+  - "{{ l }}"
+{% endfor %}
+{% endif %}

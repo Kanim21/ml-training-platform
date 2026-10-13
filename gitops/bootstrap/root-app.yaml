@@ -1,0 +1,23 @@
+# Root of the app-of-apps. `make bootstrap` applies this once; it syncs
+# every Application/AppProject in gitops/bootstrap/apps, and those point at
+# gitops/platform and gitops/serving as later phases fill them in.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Kanim21/ml-training-platform.git
+    targetRevision: main
+    path: gitops/bootstrap/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

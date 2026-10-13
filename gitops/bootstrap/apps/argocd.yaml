@@ -1,0 +1,23 @@
+# ArgoCD manages its own install from gitops/bootstrap/argocd.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Kanim21/ml-training-platform.git
+    targetRevision: main
+    path: gitops/bootstrap/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: false   # never let a bad commit prune ArgoCD's own CRDs
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

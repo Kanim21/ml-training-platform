@@ -1,0 +1,36 @@
+---
+# Pinned versions. Bump deliberately, in a commit.
+k3s_version: v1.36.5+k3s1
+
+# IP each node registers with and uses for pod traffic. Defaults to the
+# interface holding the default route; override per host in the inventory
+# when the SSH address differs (e.g. VirtualBox NAT port-forwarding).
+k3s_node_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
+
+# Address agents use to reach the API server.
+k3s_api_host: "{{ hostvars[groups['k3s_server'][0]]['k3s_node_ip'] }}"
+k3s_api_port: 6443
+
+# Extra names/IPs for the API server certificate, and the URL written into
+# the local kubeconfig. Override both when kubectl reaches the API through a
+# port-forward rather than the node IP. Set overrides as host vars in the
+# inventory; inventory group vars lose to this file.
+k3s_extra_tls_sans: []
+kubeconfig_api_url: "https://{{ k3s_api_host }}:{{ k3s_api_port }}"
+
+# Default K3s CIDRs; firewalld trusts these so pod-to-pod traffic works.
+k3s_cluster_cidr: 10.42.0.0/16
+k3s_service_cidr: 10.43.0.0/16
+
+# Packaged K3s components to turn off. Traefik is unused (port-forward /
+# NodePort until serving needs ingress).
+k3s_disable_components:
+  - traefik
+
+# Where the admin kubeconfig is written on the control machine (gitignored).
+kubeconfig_local_path: "{{ playbook_dir }}/../kubeconfig"
+
+# install.sh fetched from the same tag as k3s_version, checksum-verified.
+# Recompute when bumping k3s_version: curl -sL <url> | shasum -a 256
+k3s_install_script_url: "https://raw.githubusercontent.com/k3s-io/k3s/{{ k3s_version | urlencode }}/install.sh"
+k3s_install_script_sha256: 46177d4c99440b4c0311b67233823a8e8a2fc09693f6c89af1a7161e152fbfad

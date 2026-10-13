@@ -1,0 +1,16 @@
+# Copy to hosts.ini and set the IPs of three fresh Rocky Linux VMs.
+# hosts.ini is gitignored so lab IPs never land in Git.
+[k3s_server]
+k3s-server-1 ansible_host=192.168.56.10
+
+[k3s_agents]
+k3s-agent-1 ansible_host=192.168.56.11
+k3s-agent-2 ansible_host=192.168.56.12
+
+[k3s_cluster:children]
+k3s_server
+k3s_agents
+
+[k3s_cluster:vars]
+ansible_user=rocky
+ansible_become=true

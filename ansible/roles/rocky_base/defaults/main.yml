@@ -1,0 +1,20 @@
+---
+rocky_base_packages:
+  - chrony
+  - container-selinux
+  - dnf-automatic
+  - firewalld
+  - iptables-nft
+  - policycoreutils-python-utils
+  - tar
+  - curl
+
+# Apply security errata automatically; feature updates stay manual.
+rocky_base_auto_security_updates: true
+
+rocky_base_sshd_settings:
+  PermitRootLogin: "no"
+  PasswordAuthentication: "no"
+  KbdInteractiveAuthentication: "no"
+  X11Forwarding: "no"
+  MaxAuthTries: "3"

@@ -1,0 +1,9 @@
+# Cluster credentials and lab-specific inventory never go in Git.
+/kubeconfig
+ansible/inventory/hosts.ini
+ansible/collections/
+*.retry
+.venv/
+__pycache__/
+.DS_Store
+.ansible/

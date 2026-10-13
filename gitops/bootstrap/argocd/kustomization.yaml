@@ -1,0 +1,9 @@
+# ArgoCD itself. Applied once by `make bootstrap` (the only direct kubectl
+# apply in this repo); after that the `argocd` Application in ../apps
+# manages it from Git, so upgrades are a commit that bumps the version below.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - namespace.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.5/manifests/install.yaml

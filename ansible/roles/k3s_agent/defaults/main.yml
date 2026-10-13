@@ -1,0 +1,4 @@
+---
+# Training workers target this label (phase 3) so they never land on the server.
+k3s_agent_node_labels:
+  - ml-platform/role=worker

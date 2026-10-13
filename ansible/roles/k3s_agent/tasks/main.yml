@@ -1,0 +1,62 @@
+---
+- name: Assert the server play produced a join token
+  ansible.builtin.assert:
+    that:
+      - hostvars[groups['k3s_server'][0]]['k3s_server_node_token'] is defined
+    fail_msg: "No join token from the server. Run site.yml, not the agent play alone."
+    quiet: true
+
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Write K3s agent config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+  no_log: true
+  notify: Restart k3s-agent
+
+- name: Download pinned K3s install script
+  ansible.builtin.get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: /usr/local/sbin/k3s-install.sh
+    checksum: "sha256:{{ k3s_install_script_sha256 }}"
+    mode: "0750"
+
+- name: Read installed K3s version
+  ansible.builtin.command: /usr/local/bin/k3s --version
+  register: k3s_agent_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install K3s agent
+  ansible.builtin.command: /usr/local/sbin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: agent
+  when: k3s_version not in (k3s_agent_installed.stdout | default(''))
+  changed_when: true
+
+- name: Ensure k3s-agent service is running
+  ansible.builtin.service:
+    name: k3s-agent
+    state: started
+    enabled: true
+
+- name: Apply config changes before checking readiness
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for this agent to be Ready
+  ansible.builtin.command: >-
+    /usr/local/bin/k3s kubectl wait node/{{ inventory_hostname }}
+    --for=condition=Ready --timeout=30s
+  delegate_to: "{{ groups['k3s_server'][0] }}"
+  register: k3s_agent_ready
+  until: k3s_agent_ready.rc == 0
+  retries: 12
+  delay: 10
+  changed_when: false
