@@ -22,6 +22,16 @@
     name: "{{ rocky_base_packages }}"
     state: present
 
+# The stock "makestep 1.0 3" only steps the clock in the first three updates.
+# A VM resumed after host sleep can be minutes behind, and slewing that back
+# takes hours of TLS and lease errors, so always step when off by over 1s.
+- name: Let chrony step the clock after VM suspend/resume
+  ansible.builtin.lineinfile:
+    path: /etc/chrony.conf
+    regexp: '^makestep\s'
+    line: makestep 1 -1
+  notify: Restart chronyd
+
 - name: Enable chronyd (etcd/kine and TLS need sane clocks)
   ansible.builtin.service:
     name: chronyd
