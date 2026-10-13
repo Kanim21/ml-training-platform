@@ -20,7 +20,7 @@ See [BLUEPRINT.md](BLUEPRINT.md) for the full scope, architecture and drill list
 | Phase | What | State |
 | --- | --- | --- |
 | 1 | Cluster and GitOps foundation (Rocky Linux, K3s, Ansible, ArgoCD) | Running on a **single node** (see below); 3-node layout supported but not yet run |
-| 2 | Tracking and storage (MinIO, CloudNativePG, MLflow, Sealed Secrets) | Not started |
+| 2 | Tracking and storage (SeaweedFS S3, CloudNativePG, MLflow, Sealed Secrets) | Done: `scripts/verify-mlflow.sh` logs a run, deletes the MLflow pod, and the run survives. MinIO swapped for SeaweedFS ([ADR 0005](docs/adr/0005-seaweedfs-instead-of-minio.md)) |
 | 3 | Resilient training (`torchrun`, checkpoint/resume, lineage) | Not started |
 | 4 | Pipeline and gates (Argo Workflows, Pandera, regression gate) | Not started |
 | 5 | Serving and observability (latency gate, Grafana) | Not started |
@@ -34,6 +34,12 @@ SSH and the API are reached through port-forwards
 (`ansible/inventory/hosts.ini.single-node.example`). Drill 1 (node loss)
 needs at least one agent, so agents get added before phase 3. That's an
 inventory change; the roles already handle it.
+
+The VM has 4 GB of RAM. With phase 2 running, the node had about 790 MB
+available, measured with `free -m` on 2026-10-13. MLflow (about 400 MiB) and
+the ArgoCD application controller (about 310 MiB) are the largest pods. To
+fit, ArgoCD's Dex and notifications controllers are scaled to zero, and
+MLflow runs one worker with its GenAI job runner disabled.
 
 ## Failure drills
 
@@ -75,7 +81,7 @@ After that, every change to the cluster is a Git commit. Other targets:
 ```
 ansible/            Rocky Linux hardening + K3s install (roles: rocky_base, k3s_server, k3s_agent, kubeconfig)
 gitops/bootstrap/   ArgoCD install (argocd/), root app, child apps (apps/)
-gitops/platform/    phase 2+: MinIO, CloudNativePG, MLflow, Argo Workflows, monitoring
+gitops/platform/    sealed-secrets, cnpg-operator, seaweedfs (S3), mlflow (+ Postgres); later Argo Workflows, monitoring
 gitops/serving/     phase 5: model server, version pinned here
 pipelines/          phase 4: Argo WorkflowTemplates
 trainer/            phase 3: Dockerfile, train.py, validate.py

@@ -8,7 +8,7 @@ KUBECONFIG  ?= $(CURDIR)/kubeconfig
 export KUBECONFIG
 export ANSIBLE_CONFIG := $(CURDIR)/$(ANSIBLE_DIR)/ansible.cfg
 
-.PHONY: help bootstrap cluster argocd verify argocd-ui argocd-password reset lint deps
+.PHONY: help bootstrap cluster argocd verify verify-mlflow mlflow-ui seal-s3 argocd-ui argocd-password reset lint deps
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_%-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -27,6 +27,15 @@ argocd: ## Install ArgoCD and the root app (the only direct kubectl apply)
 
 verify: ## Check nodes Ready and every ArgoCD app Synced + Healthy
 	./scripts/verify-cluster.sh
+
+verify-mlflow: ## Phase 2 check: log a run, restart MLflow, confirm the run survived (needs mlflow-skinny)
+	./scripts/verify-mlflow.sh
+
+mlflow-ui: ## Port-forward MLflow to http://localhost:5000
+	kubectl -n mlflow port-forward svc/mlflow 5000:5000
+
+seal-s3: ## Generate a new S3 key pair as SealedSecrets (commit the output)
+	./scripts/seal-s3-credentials.sh
 
 argocd-ui: ## Port-forward the ArgoCD UI to https://localhost:8080
 	kubectl -n argocd port-forward svc/argocd-server 8080:443
