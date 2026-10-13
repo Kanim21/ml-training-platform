@@ -1,0 +1,16 @@
+# Sealed Secrets controller, pinned upstream release manifest. It installs into
+# kube-system as sealed-secrets-controller, which is kubeseal's default target.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/bitnami/sealed-secrets/releases/download/v0.40.0/controller.yaml
+patches:
+  - target:
+      kind: Deployment
+      name: sealed-secrets-controller
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 200m, memory: 128Mi}

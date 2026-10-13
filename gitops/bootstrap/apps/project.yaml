@@ -1,5 +1,6 @@
 # Every platform and serving app lives in this project, which may only pull
-# from this repo (plus pinned upstream Helm repos added per component).
+# from this repo. Upstream components are pinned release manifests pulled in
+# by kustomize, so no extra source repos are needed.
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:

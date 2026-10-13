@@ -3,3 +3,5 @@ kind: Kustomization
 resources:
   - project.yaml
   - argocd.yaml
+  - sealed-secrets.yaml
+  - cnpg-operator.yaml
